@@ -466,6 +466,13 @@
         ]
     },
     {
+        "name": "Esolang",
+        "ops": [
+            "Run Brainfuck",
+            "Run Emo Language"
+        ]
+    },
+    {
         "name": "Other",
         "ops": [
             "Entropy",
