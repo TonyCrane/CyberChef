@@ -166,6 +166,9 @@ class RunEmoLanguage extends Operation {
                         if (typeof c == "string") {
                             workingLocation = c.charCodeAt(0);
                         }
+                        if (c === undefined) {
+                            throw new OperationError("Input is not enough");
+                        }
                         break;
                     case "|":
                         break;
