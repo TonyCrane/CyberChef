@@ -146,7 +146,6 @@
         <div id="content-wrapper">
             <div id="banner" class="row">
                 <div class="col" style="text-align: left; padding-left: 10px;">
-                    <a href="CyberChef_v<%= htmlWebpackPlugin.options.version %>.zip" download>Download CyberChef <i class="material-icons">file_download</i></a>
                 </div>
                 <div class="col-md-6" id="notice-wrapper">
                     <span id="notice">
@@ -630,7 +629,7 @@
                     <div class="modal-body">
                         <img aria-hidden="true" class="about-img-left" src="<%- require('../static/images/cyberchef-128x128.png') %>" alt="CyberChef Logo"/>
                         <p class="subtext">
-                            Version <%=  htmlWebpackPlugin.options.version %><br>
+                            Version <%=  htmlWebpackPlugin.options.version %>+ (<a href="https://github.com/TonyCrane/CyberChef">TonyCrane personal modified</a>)<br>
                             Compile time: <%= htmlWebpackPlugin.options.compileTime %>
                         </p>
                         <p>&copy; Crown Copyright 2016.</p>
