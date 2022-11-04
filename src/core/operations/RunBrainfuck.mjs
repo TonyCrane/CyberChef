@@ -77,6 +77,9 @@ class RunBrainfuck extends Operation {
                 if (typeof c == "string") {
                     data[ptr] = c.charCodeAt(0);
                 }
+                if (c === undefined) {
+                    throw new OperationError("Input is not enough");
+                }
             },
         };
 
