@@ -148,7 +148,10 @@
         <div id="content-wrapper">
             <div id="banner" class="row">
                 <div class="col" style="text-align: left; padding-left: 10px;">
+<<<<<<< HEAD
                     <a href="#" data-toggle="modal" data-target="#download-modal" data-help-title="Downloading CyberChef" data-help="<p>CyberChef can be downloaded to run locally or hosted within your own network. It has no server-side component so all that is required is that the ZIP file is uncompressed and the files are accessible.</p><p>As a user, it is worth noting that unofficial versions of CyberChef could have been modified to introduce Input and/or Recipe exfiltration. We recommend always using the official, open source, up-to-date version of CyberChef hosted at <a href='https://gchq.github.io/CyberChef'>https://gchq.github.io/CyberChef</a> if accessible.</p><p>The Network tab in your browser's Developer console (F12) can be used to inspect the network requests made by a website. This can confirm that no data is uploaded when a CyberChef recipe is baked.</p>">Download CyberChef <i class="material-icons">file_download</i></a>
+=======
+>>>>>>> 9f1a7b32 (update index page)
                 </div>
                 <div class="col-md-6" id="notice-wrapper">
                     <span id="notice">
@@ -573,7 +576,7 @@
                     <div class="modal-body">
                         <img aria-hidden="true" class="about-img-left" src="<%- require('../static/images/cyberchef-128x128.png') %>" alt="CyberChef Logo"/>
                         <p class="subtext">
-                            Version <%= htmlWebpackPlugin.options.version %><br>
+                            Version <%= htmlWebpackPlugin.options.version %>+ (<a href="https://github.com/TonyCrane/CyberChef">TonyCrane personal modified</a>)<br>
                             Compile time: <%= htmlWebpackPlugin.options.compileTime %>
                         </p>
                         <p>&copy; Crown Copyright 2016-<%= htmlWebpackPlugin.options.compileYear %>.</p>
