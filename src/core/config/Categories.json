@@ -4,6 +4,15 @@
         "ops": []
     },
     {
+        "name": "TonyCrane Extensions",
+        "ops": [
+            "Run Brainfuck",
+            "Run Emo Language",
+            "RISC-V Decode",
+            "RISC-V Encode"
+        ]
+    },
+    {
         "name": "Data format",
         "ops": [
             "To Hexdump",
@@ -478,13 +487,6 @@
             "Scatter chart",
             "Series chart",
             "Heatmap chart"
-        ]
-    },
-    {
-        "name": "Esolang",
-        "ops": [
-            "Run Brainfuck",
-            "Run Emo Language"
         ]
     },
     {
