@@ -13,12 +13,10 @@ install:
 	@npm install
 
 deploy:
-	@echo "Deploying CyberChef..."
-	@npm run build
 	@echo "Copying files to server..."
 	@scp -r build/prod/* aliyun:/www/wwwroot/lab.tonycrane.cc/CyberChef
 
-cdn-deploy:
+cdn-deploy: deploy
 	@echo "Run the following command on server:"
 	@echo "  cd /www/wwwroot/lab.tonycrane.cc/CyberChef"
 	@echo "  sed -i 's/${self.docURL}/https:\/\/cdn.tonycrane.cc\/lab\/CyberChef/g' assets/main.js"
