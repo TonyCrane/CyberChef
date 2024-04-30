@@ -70,6 +70,7 @@ const FIELDS = {
 
     // R-type: FP specific fields
     r_fp_fmt: { pos: [26, 2], name: 'fmt' },
+    r_fp_rm:  { pos: [14, 3], name: 'rm' },
 
     // I-type
     i_imm_11_0: { pos: [31, 12], name: 'imm[11:0]' },
@@ -560,8 +561,8 @@ const ISA_C = {
 
 // Integer Computational Instructions
     // Integer Constant-Generator Instructions
-    'c.li':       { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0],                immBits: [[5],  [[4,0]]],   opcode: C_OPCODE.C1 },
-    'c.lui':      { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0,2], nzimm: true, immBits: [[17], [[16,12]]], opcode: C_OPCODE.C1 },
+    'c.li':       { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '010', rdRs1Mask: 0b10, rdRs1Excl: [0],                immBits: [[5], [[4,0]]],                                   opcode: C_OPCODE.C1 },
+    'c.lui':      { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '011', rdRs1Mask: 0b10, rdRs1Excl: [0,2], nzimm: true, immBits: [[5], [[4,0]]], immBitsLabels: [[17], [[16,12]]], opcode: C_OPCODE.C1 },
 
     // Integer Register-Immediate Operations
     'c.addi':     { isa: 'C', xlens: 0b111, fmt: 'CI-type', funct3: '000', rdRs1Mask: 0b11, rdRs1Excl: [0], nzimm: true,             immBits: [[5], [[4,0]]],       opcode: C_OPCODE.C1 },
@@ -594,6 +595,17 @@ const ISA_C = {
 
     'c.ebreak': { isa: 'C', xlens: 0b111, fmt: 'CR-type', funct4: '1001', rdRs1Mask: 0b00, rdRs1Val: 0, rs2Val: 0, opcode: C_OPCODE.C2 },
 }
+
+// Privileged instruction set
+export const ISA_Priv = {
+    // Trap-Return Instructions
+    sret: { isa: 'Priv', fmt: 'I-type', funct12: '000100000010', funct3: '000', opcode: OPCODE.SYSTEM },
+    mret: { isa: 'Priv', fmt: 'I-type', funct12: '001100000010', funct3: '000', opcode: OPCODE.SYSTEM },
+  
+    // Interrupt-Management Instructions
+    wfi: { isa: 'Priv', fmt: 'I-type', funct12: '000100000101', funct3: '000', opcode: OPCODE.SYSTEM },
+}
+  
 
 // ISA per opcode
 const ISA_OP = {
@@ -722,6 +734,9 @@ const ISA_SYSTEM = {
     [ISA_RV32I['ecall'].funct3]: {
         [ISA_RV32I['ecall'].funct12]:   'ecall',
         [ISA_RV32I['ebreak'].funct12]:  'ebreak',
+        [ISA_Priv['sret'].funct12]:     'sret',
+        [ISA_Priv['mret'].funct12]:     'mret',
+        [ISA_Priv['wfi'].funct12]:      'wfi',
     },
     [ISA_Zicsr['csrrw'].funct3]:  'csrrw',
     [ISA_Zicsr['csrrs'].funct3]:  'csrrs',
@@ -1128,6 +1143,15 @@ const FLOAT_REGISTER = {
     ft11: "f31",
 }
 
+export const FLOAT_ROUNDING_MODE = {
+    "rne": 0b000,
+    "rtz": 0b001,
+    "rdn": 0b010,
+    "rup": 0b011,
+    "rmm": 0b100,
+    "dyn": 0b111,
+}  
+
 // CSR Encodings
 const CSR = {
     cycle:          0xc00,
@@ -1458,13 +1482,15 @@ const FRAG = {
     RS2: 8,
     RS3: 9,
     SUCC: 10,
+    FRM: 11,
 }
 
 // Entire ISA
 const ISA = Object.assign({},
     ISA_RV32I, ISA_RV64I, ISA_RV128I,
     ISA_Zifencei, ISA_Zicsr,
-    ISA_M, ISA_A, ISA_F, ISA_D, ISA_Q, ISA_C);
+    ISA_M, ISA_A, ISA_F, ISA_D, ISA_Q, ISA_C,
+    ISA_Priv);
 
 function makeEnum(names) {
     return Object.freeze(
@@ -2038,7 +2064,7 @@ class Decoder {
         const useRm = inst.funct3 === undefined;
         const f = {
             opcode: new Frag(FRAG.OPC, this.#mne, this.#opcode, FIELDS.opcode.name),
-            funct3: new Frag(FRAG.OPC, this.#mne, funct3, useRm ? 'rm' : FIELDS.funct3.name),
+            funct3: new Frag(FRAG.OPC, this.#mne, funct3, FIELDS.funct3.name),
             funct5: new Frag(FRAG.OPC, this.#mne, funct5, FIELDS.r_funct5.name),
             fmt:    new Frag(FRAG.OPC, this.#mne, fmt, FIELDS.r_fp_fmt.name),
             rd:     new Frag(FRAG.RD, dest, rd, FIELDS.rd.name),
@@ -2051,6 +2077,16 @@ class Decoder {
         if (useRs2) {
             f['rs2'].id = FRAG.RS2;
             this.asmFrags.push(f['rs2']);
+        }
+        if (useRm) {
+            f['funct3'].field = FIELDS.r_fp_rm.name;
+            const frm = decFrm(funct3);
+            // Push frm assembly operand unless using "dyn" dynamic mode
+            if (frm !== 'dyn') {
+                f['funct3'].id = FRAG.FRM;
+                f['funct3'].asm = frm;
+                this.asmFrags.push(f['funct3']);
+            }
         }
 
         // Binary fragments from MSB to LSB
@@ -2081,12 +2117,12 @@ class Decoder {
             opcode: new Frag(FRAG.OPC, this.#mne, this.#opcode, FIELDS.opcode.name),
             funct3: new Frag(FRAG.OPC, this.#mne, funct3, FIELDS.funct3.name),
             rd:     new Frag(FRAG.RD, dest, rd, FIELDS.rd.name),
-            rs1:    new Frag(FRAG.RS1, base, rs1, FIELDS.rs1.name),
+            rs1:    new Frag(FRAG.RS1, base, rs1, FIELDS.rs1.name, true),
             imm:    new Frag(FRAG.IMM, offset, imm, FIELDS.i_imm_11_0.name),
         };
 
         // Assembly fragments in order of instruction
-        this.asmFrags.push(f['opcode'], f['rd'], f['rs1'], f['imm']);
+        this.asmFrags.push(f['opcode'], f['rd'], f['imm'], f['rs1']);
 
         // Binary fragments from MSB to LSB
         this.binFrags.push(f['imm'], f['rs1'], f['funct3'], f['rd'], f['opcode']);
@@ -2212,9 +2248,11 @@ class Decoder {
             } else if (op_imm_64) {
                 shamtWidth = 6;
                 this.isa = 'RV128I';  // Set ISA here to avoid assumed ISA of RV64I below
-            } else if (this.#config.ISA === COPTS_ISA.RV32I || (shamt_6 === '0' && shamt_5 === '0')) {
+            } else if (this.#config.ISA === COPTS_ISA.RV32I ||
+                      (this.#config.ISA === COPTS_ISA.AUTO && shamt_6 === '0' && shamt_5 === '0')) {
                 shamtWidth = 5;
-            } else if (this.#config.ISA === COPTS_ISA.RV64I || shamt_6 === '0') {
+            } else if (this.#config.ISA === COPTS_ISA.RV64I || 
+                      (this.#config.ISA === COPTS_ISA.AUTO && shamt_6 === '0')) {
                 shamtWidth = 6;
             } else {
                 shamtWidth = 7;
@@ -2685,7 +2723,7 @@ class Decoder {
             fmt = fields['fmt'],
             rs2 = fields['rs2'],
             rs1 = fields['rs1'],
-            rm = fields['funct3'],
+            funct3 = fields['funct3'],
             rd = fields['rd'];
 
         // Find instruction
@@ -2711,13 +2749,14 @@ class Decoder {
         const src1 = decReg(rs1, true),
                     src2 = decReg(rs2, true),
                     src3 = decReg(rs3, true),
+                    frm  = decFrm(funct3),
                     dest = decReg(rd, true);
 
         // Create fragments
         const f = {
             opcode: new Frag(FRAG.OPC, this.#mne, this.#opcode, FIELDS.opcode.name),
             fmt:    new Frag(FRAG.OPC, this.#mne, fmt, FIELDS.r_fp_fmt.name),
-            rm:     new Frag(FRAG.OPC, this.#mne, rm, 'rm'),
+            funct3: new Frag(FRAG.OPC, this.#mne, funct3, FIELDS.r_fp_rm.name),
             rd:     new Frag(FRAG.RD, dest, rd, FIELDS.rd.name),
             rs1:    new Frag(FRAG.RS1, src1, rs1, FIELDS.rs1.name),
             rs2:    new Frag(FRAG.RS2, src2, rs2, FIELDS.rs2.name),
@@ -2726,10 +2765,15 @@ class Decoder {
 
         // Assembly fragments in order of instruction
         this.asmFrags.push(f['opcode'], f['rd'], f['rs1'], f['rs2'], f['rs3']);
+        if (frm !== 'dyn') {
+            f['funct3'].id = FRAG.FRM;
+            f['funct3'].asm = frm;
+            this.asmFrags.push(f['funct3']);
+        }      
 
         // Binary fragments from MSB to LSB
-        this.binFrags.push(f['rs3'], f['fmt'], f['rs2'], f['rs1'], f['rm'], f['rd'],
-            f['opcode']);
+        this.binFrags.push(f['rs3'], f['fmt'], f['rs2'], f['rs1'], f['funct3'],
+            f['rd'], f['opcode']);
     }
 
     /**
@@ -2979,20 +3023,23 @@ class Decoder {
             funct3: new Frag(FRAG.OPC, this.#mne, funct3, FIELDS.c_funct3.name),
         };
 
-        // Create and append custom fragments
+        // Create and append custom register fragments
         const dynamicRdRs1 = inst.rdRs1Val === undefined;
-        const dynamicImm = inst.immVal === undefined;
         if (dynamicRdRs1) {
             f['rd_rs1'] = new Frag(FRAG.RD, destSrc1, rdRs1, destSrc1Name);
         } else {
             f['rd_rs1'] = new Frag(FRAG.OPC, this.#mne, rdRs1, 'static-' + destSrc1Name);
         }
+
+        // Create and append custom immediate fragments
+        const immBitsLabels = inst.immBitsLabels ?? inst.immBits;
+        const dynamicImm = inst.immVal === undefined;
         if (dynamicImm) {
-            f['imm0'] = new Frag(FRAG.IMM, immVal, imm0, immName + immBitsToString(inst.immBits[0]));
-            f['imm1'] = new Frag(FRAG.IMM, immVal, imm1, immName + immBitsToString(inst.immBits[1]));
+            f['imm0'] = new Frag(FRAG.IMM, immVal, imm0, immName + immBitsToString(immBitsLabels[0]));
+            f['imm1'] = new Frag(FRAG.IMM, immVal, imm1, immName + immBitsToString(immBitsLabels[1]));
         } else {
-            f['imm0'] = new Frag(FRAG.OPC, this.#mne, imm0, 'static-' + immName + immBitsToString(inst.immBits[0]));
-            f['imm1'] = new Frag(FRAG.OPC, this.#mne, imm1, 'static-' + immName + immBitsToString(inst.immBits[1]));
+            f['imm0'] = new Frag(FRAG.OPC, this.#mne, imm0, 'static-' + immName + immBitsToString(immBitsLabels[0]));
+            f['imm1'] = new Frag(FRAG.OPC, this.#mne, imm1, 'static-' + immName + immBitsToString(immBitsLabels[1]));
         }
 
         // Assembly fragments in order of instruction
@@ -3562,6 +3609,20 @@ function decCSR(binStr) {
     return csr;
 }
 
+// search for float rounding mode name from the given binary string
+function decFrm(binstr) {
+    // decode binary string into numerical value
+    const val = parseInt(binstr, BASE.bin);
+  
+    // attempt to search for entry in csr object with matching value
+    const entry = Object.entries(FLOAT_ROUNDING_MODE).find(e => e[1] === val);
+    if (entry === undefined) {
+        throw new OperationError(`Invalid float rounding mode field`);
+    }
+  
+    return entry[0];
+}
+
 // Convert C instruction immediate bit configurations
 //   To a string for binFrag name information
 function immBitsToString(immBits) {
@@ -3861,7 +3922,10 @@ class Encoder {
      */
     #encodeOP_FP() {
         // Get operands
-        const dest = this.#opr[0], src1 = this.#opr[1], src2 = this.#opr[2];
+        const dest = this.#opr[0],
+              src1 = this.#opr[1],
+              src2 = this.#opr[2],
+              frm  = this.#inst.rs2 !== undefined ? this.#opr[2] : this.#opr[3];
 
         // Convert to binary representation
         let floatRd = true;
@@ -3877,10 +3941,10 @@ class Encoder {
         const rd = encReg(dest, floatRd),
             rs1 = encReg(src1, floatRs1),
             rs2 = this.#inst.rs2 ?? encReg(src2, true),
-            rm = this.#inst.funct3 ?? '111'; // funct3 or dynamic rounding mode
+            funct3 = this.#inst.funct3 ?? encFrm(frm) ?? '111'; /* dym rm */
 
         // Construct binary instruction
-        this.bin = this.#inst.funct5 + this.#inst.fp_fmt + rs2 + rs1 + rm + rd +
+        this.bin = this.#inst.funct5 + this.#inst.fp_fmt + rs2 + rs1 + funct3 + rd +
             this.#inst.opcode;
     }
 
@@ -3889,7 +3953,7 @@ class Encoder {
      */
     #encodeJALR() {
         // Get operands
-        const dest = this.#opr[0], base = this.#opr[1], offset = this.#opr[2];
+        const dest = this.#opr[0], offset = this.#opr[1], base = this.#opr[2];
 
         // Convert to binary representation
         const rd = encReg(dest), rs1 = encReg(base),
@@ -4171,15 +4235,16 @@ class Encoder {
     #encodeR4() {
         // Get operands
         const dest = this.#opr[0], src1 = this.#opr[1],
-            src2 = this.#opr[2], src3 = this.#opr[3];
+            src2 = this.#opr[2], src3 = this.#opr[3],
+            frm = this.#opr[4];
 
         // Convert to binary representation
         const rd = encReg(dest, true), rs1 = encReg(src1, true),
             rs2 = encReg(src2, true), rs3 = encReg(src3, true),
-            fmt = this.#inst.fp_fmt, rm = '111'; // dynamic rounding mode
+            fmt = this.#inst.fp_fmt, funct3 = encFrm(frm) ?? '111'; /* dym rm */
 
         // Construct binary instruction
-        this.bin = rs3 + fmt + rs2 + rs1 + rm + rd +
+        this.bin = rs3 + fmt + rs2 + rs1 + funct3 + rd +
             this.#inst.opcode;
     }
 
@@ -4547,11 +4612,14 @@ function encRegPrime(reg, floatReg=false) {
 
 // Convert memory ordering to binary
 function encMem(input) {
-    let bits = '';
+    // Default input to 'iorw'
+    input = input ?? 'iorw';
 
     // I: Device input, O: device output, R: memory reads, W: memory writes
     const access = ['i', 'o', 'r', 'w'];
 
+    // Construct bits from input character flags
+    let bits = '';
     let one_count = 0;
     for (let i = 0; i < access.length; i++) {
         if (input.includes(access[i])) {
@@ -4572,7 +4640,7 @@ function encMem(input) {
 // Convert CSR (name or imm) to binary
 function encCSR(csr) {
     // Attempt to find CSR value from CSR name map
-    let csrVal = CSR[csr];
+    let csrVal = CSR[csr ?? 'cycle'];
 
     // If failed, attempt to parse as immediate
     if (csrVal === undefined) {
@@ -4586,3 +4654,18 @@ function encCSR(csr) {
 
     return encImm(csrVal, FIELDS.i_csr.pos[1]);
 }
+
+// Convert float rounding mode name to binary
+function encFrm(frm) {
+    // Default input to 'dyn'
+    frm = frm ?? 'dyn';
+  
+    // Lookup name in frm table
+    const frmVal = FLOAT_ROUNDING_MODE[frm];
+    if (frmVal === undefined) {
+        throw new OperationError(`Invalid float rounding mode field '${frm}'`);
+    }
+  
+    return encImm(frmVal, FIELDS.r_fp_rm.pos[1]);
+}
+  
