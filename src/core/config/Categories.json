@@ -23,6 +23,8 @@
             "From Charcode",
             "To Decimal",
             "From Decimal",
+            "To Float",
+            "From Float",
             "To Binary",
             "From Binary",
             "To Octal",
@@ -38,6 +40,8 @@
             "To Base64",
             "From Base64",
             "Show Base64 offsets",
+            "To Base92",
+            "From Base92",
             "To Base85",
             "From Base85",
             "To Base",
@@ -76,7 +80,10 @@
             "JSON to CSV",
             "Avro to JSON",
             "CBOR Encode",
-            "CBOR Decode"
+            "CBOR Decode",
+            "Caret/M-decode",
+            "Rison Encode",
+            "Rison Decode"
         ]
     },
     {
@@ -90,6 +97,8 @@
             "DES Decrypt",
             "Triple DES Encrypt",
             "Triple DES Decrypt",
+            "Fernet Encrypt",
+            "Fernet Decrypt",
             "LS47 Encrypt",
             "LS47 Decrypt",
             "RC2 Encrypt",
@@ -97,9 +106,17 @@
             "RC4",
             "RC4 Drop",
             "ChaCha",
+            "Salsa20",
+            "XSalsa20",
             "Rabbit",
             "SM4 Encrypt",
             "SM4 Decrypt",
+            "GOST Encrypt",
+            "GOST Decrypt",
+            "GOST Sign",
+            "GOST Verify",
+            "GOST Key Wrap",
+            "GOST Key Unwrap",
             "ROT13",
             "ROT13 Brute Force",
             "ROT47",
@@ -109,6 +126,8 @@
             "XOR Brute Force",
             "Vigenère Encode",
             "Vigenère Decode",
+            "XXTEA Encrypt",
+            "XXTEA Decrypt",
             "To Morse Code",
             "From Morse Code",
             "Bacon Cipher Encode",
@@ -159,6 +178,8 @@
             "Hex to PEM",
             "Hex to Object Identifier",
             "Object Identifier to Hex",
+            "PEM to JWK",
+            "JWK to PEM",
             "Generate PGP Key Pair",
             "PGP Encrypt",
             "PGP Decrypt",
@@ -170,7 +191,14 @@
             "RSA Verify",
             "RSA Encrypt",
             "RSA Decrypt",
-            "Parse SSH Host Key"
+            "Generate ECDSA Key Pair",
+            "ECDSA Signature Conversion",
+            "ECDSA Sign",
+            "ECDSA Verify",
+            "Parse SSH Host Key",
+            "Parse CSR",
+            "Public Key from Certificate",
+            "Public Key from Private Key"
         ]
     },
     {
@@ -227,6 +255,8 @@
             "VarInt Decode",
             "JA3 Fingerprint",
             "JA3S Fingerprint",
+            "JA4 Fingerprint",
+            "JA4Server Fingerprint",
             "HASSH Client Fingerprint",
             "HASSH Server Fingerprint",
             "Format MAC addresses",
@@ -235,6 +265,7 @@
             "Encode NetBIOS Name",
             "Decode NetBIOS Name",
             "Defang URL",
+            "Fang URL",
             "Defang IP Addresses"
         ]
     },
@@ -297,7 +328,8 @@
             "Escape string",
             "Unescape string",
             "Pseudo-Random Number Generator",
-            "Sleep"
+            "Sleep",
+            "File Tree"
         ]
     },
     {
@@ -309,6 +341,7 @@
             "To UNIX Timestamp",
             "Windows Filetime to UNIX Timestamp",
             "UNIX Timestamp to Windows Filetime",
+            "DateTime Delta",
             "Extract dates",
             "Get Time",
             "Sleep"
@@ -325,13 +358,15 @@
             "Extract domains",
             "Extract file paths",
             "Extract dates",
+            "Extract hashes",
             "Regular expression",
             "XPath expression",
             "JPath expression",
             "CSS selector",
             "Extract EXIF",
             "Extract ID3",
-            "Extract Files"
+            "Extract Files",
+            "RAKE"
         ]
     },
     {
@@ -354,7 +389,8 @@
             "LZMA Decompress",
             "LZMA Compress",
             "LZ4 Decompress",
-            "LZ4 Compress"
+            "LZ4 Compress",
+            "LZNT1 Decompress"
         ]
     },
     {
@@ -379,7 +415,7 @@
             "Snefru",
             "BLAKE2b",
             "BLAKE2s",
-            "GOST hash",
+            "GOST Hash",
             "Streebog",
             "SSDEEP",
             "CTPH",
@@ -395,6 +431,7 @@
             "Scrypt",
             "NT Hash",
             "LM Hash",
+            "MurmurHash3",
             "Fletcher-8 Checksum",
             "Fletcher-16 Checksum",
             "Fletcher-32 Checksum",
