@@ -6,7 +6,7 @@
 
 import Operation from "../Operation.mjs";
 import OperationError from "../errors/OperationError.mjs";
-import { Instruction } from "../lib/RISCV.mjs";
+import { Instruction, PSEUDO_INSTUCTIONS } from "../lib/RISCV.mjs";
 import { fromHex } from "../lib/Hex.mjs";
 import Utils from "../Utils.mjs";
 
@@ -95,7 +95,8 @@ class RISCVEncode extends Operation {
         const addrLength = Math.ceil(Math.log(instNum * 4) / Math.log(16));
         for (let i = 0; i < instNum; ++i) {
             let inst;
-            const instDeref = this.deref(insts[i], refList, lineMap[i], i * 4);
+            const instRaw = this.unpseudo(insts[i]);
+            const instDeref = this.deref(instRaw, refList, lineMap[i], i * 4);
             try {
                 inst = new Instruction(instDeref, { ISA: isa });
             } catch (error) {
@@ -185,14 +186,12 @@ class RISCVEncode extends Operation {
      */
     deref(inst, refList, lineNum, instAddr) {
         const tokens = inst.split(/[ ,()]+/);
-        console.log(tokens);
         const mneList = [
             "jal",
             "beq", "bne", "blt", "bge", "bltu", "bgeu",
         ];
         if (!mneList.includes(tokens[0].toLowerCase())) return inst;
         const target = tokens[tokens.length - 1];
-        console.log(target);
         if ((target.includes("0x") && !isNaN(parseInt(target, 16))) || !isNaN(parseInt(target, 10))) return inst;
         if (refList[target] === undefined) {
             throw new OperationError(`Error at line ${lineNum}: Undefined label "${target}"`);
@@ -217,6 +216,43 @@ class RISCVEncode extends Operation {
             }
         }
         return invRefList;
+    }
+
+    /**
+     * @param {string} inst
+     * @returns {string}
+     */
+    unpseudo(inst) {
+        const tokens = inst.split(/[ ,()]+/);
+        const mne = tokens[0].toLowerCase();
+        if (PSEUDO_INSTUCTIONS[mne] === undefined) return inst;
+        let item = PSEUDO_INSTUCTIONS[mne];
+        if (typeof item[0] !== "string") {
+            for (let i = 0; i < item.length; ++i) {
+                const pseudoTokens = item[i][0].split(/[ ,()]+/);
+                if (pseudoTokens.length !== tokens.length) continue;
+                item = item[i];
+                break;
+            }
+        }
+        const [pseudo, format] = item;
+        const pseudoTokens = pseudo.split(/[ ,()]+/);
+        const formatSpaceIndex = format.indexOf(" ");
+        const [formatMne, formatArgs] = [format.slice(0, formatSpaceIndex), format.slice(formatSpaceIndex + 1)];
+        let translatedArgs = formatArgs;
+        const placeholders = ["rd", "rs", "rt", "imm", "csr", "offset"];
+        if (pseudoTokens.length !== tokens.length) return inst;
+        for (let i = 1; i < pseudoTokens.length; ++i) {
+            const pseudoToken = pseudoTokens[i];
+            const instToken = tokens[i];
+            for (let j = 0; j < placeholders.length; ++j) {
+                if (pseudoToken === placeholders[j]) {
+                    translatedArgs = translatedArgs.replaceAll(placeholders[j], instToken);
+                }
+            }
+        }
+
+        return formatMne + " " + translatedArgs;
     }
 
 }
