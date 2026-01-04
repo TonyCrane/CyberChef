@@ -4,6 +4,12 @@ import js from "@eslint/js";
 import globals from "globals";
 
 export default [
+    {
+        ignores: [
+            "src/core/vendor/**",
+            "src/core/lib/RISCV.mjs"
+        ]
+    },
     js.configs.recommended,
     {
         languageOptions: {
@@ -31,7 +37,6 @@ export default [
                 "PKG_VERSION": false
             },
         },
-        ignores: ["src/core/vendor/**"],
         plugins: {
             jsdoc
         },
